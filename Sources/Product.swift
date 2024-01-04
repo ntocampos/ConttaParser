@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Product: Equatable {
+public struct Product: Equatable {
     var name: String
     var unitPrice: Double?
     var total: Double

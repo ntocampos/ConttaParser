@@ -14,17 +14,17 @@ enum ProductParsingError: Error {
 
 @available(macOS 13.0, *)
 @available(iOS 16.0, *)
-class MyParser {
+public class MyParser {
     var text: String
     let nameRegex = /(.)(.)/
     let priceRegex = /(\d+[,|\.]\d\d?)/
     let whiteSpaceRegex = /[\n\r\s]*/
 
-    init(_ text: String) {
+    public init(_ text: String) {
         self.text = text
     }
 
-    func parse() throws -> [Product] {
+    public func parse() throws -> [Product] {
         let anchors = findAnchors()
         guard anchors.count > 0 else { throw ProductParsingError.noPricesFound }
 
