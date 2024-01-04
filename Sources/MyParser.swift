@@ -14,7 +14,7 @@ enum ProductParsingError: Error {
 
 @available(macOS 13.0, *)
 @available(iOS 16.0, *)
-class ConttaParser {
+class MyParser {
     var text: String
     let nameRegex = /(.)(.)/
     let priceRegex = /(\d+[,|\.]\d\d?)/

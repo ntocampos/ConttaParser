@@ -19,7 +19,7 @@ final class ConttaParserTests: XCTestCase {
     }
 
     func testRecipeTemplate1() throws {
-        let parser = ConttaParser("""
+        let parser = MyParser("""
         CONTA DE CONSUMO
         1 PIZZA DOG HAPPY D (18,90)
         18,90
@@ -44,7 +44,7 @@ final class ConttaParserTests: XCTestCase {
     }
 
     func testRecipeTemplate2() throws {
-        let parser = ConttaParser("""
+        let parser = MyParser("""
         MESA/CARTÃO/BOX: 0009 (PARCIAL)
         Atendente: MOISES
         Chave..: 011989
