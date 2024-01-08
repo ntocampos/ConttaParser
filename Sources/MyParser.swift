@@ -17,7 +17,7 @@ enum ProductParsingError: Error {
 public class MyParser {
     var text: String
     let nameRegex = /(.)(.)/
-    let priceRegex = /(\d+[,|\.]\d\d?)/
+    let priceRegex = /(\d+\s*[,|\.]\s*\d\d?)/
     let whiteSpaceRegex = /[\n\r\s]*/
 
     public init(_ text: String) {
