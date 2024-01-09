@@ -134,7 +134,9 @@ public class MyParser {
     }
 
     private func strToDouble(_ str: String) -> Double? {
-        let parsedStr = str.replacingOccurrences(of: ",", with: ".")
+        let parsedStr = str
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: ",", with: ".")
         return Double(parsedStr)
     }
 }

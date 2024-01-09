@@ -45,89 +45,92 @@ final class ConttaParserTests: XCTestCase {
 
     func testRecipeTemplate2() throws {
         let parser = MyParser("""
-        MESA/CARTÃO/BOX: 0009 (PARCIAL)
-        Atendente: MOISES
-        Chave..: 011989
-        Entrada: 14/12/2023
-        20:36
-        Saida..:
-        14/12/2023 21:36
-        Tempo. •
-        59min
-        DESCRICAO QTDE
-        COPO LIMONADA
-        1
-        1222
-        TOTAL
-        -+2822
-        300 ML
-        12,00
-        PR. UNI
-        LIBANESA
-        12,00
-        ESFIRAS (UN) SEM CARNE
-        12,50
-        ESFIRAS COM CARNE (UN)
-        12,50
-        12,50
-        3
-        KAFTAS BOVINA
-        1
-        26,00
-        KIBE (UN)
-        1
-        12,50
-        REFRIGERANTE COCA
-        2
-        7,90
-        REFRIGERANTE
-        COCA
-        1
-        ZERO
-        7,90
-        SHAWARMAS BOVINA
-        2
-        32,00
-        TABUA RIHAN
-        1
-        38,00
-        Valor Total
-        Pedido:
-        Taxa de Servico..
-        Valor a Pagar:
-        Pessoas na Mesa:
-        Valor Por Pessoa:
-        EM VALOR
-        37,50
-        26,00
-        12,50
-        15,80
-        7,90
-        64,00
-        38,00
-        226,20
-        22,62(*)
-        248, 82
-        004
-        62,21
+        DITNA DO FUTURO
+        NFERENCIA 935555 DE =====≤===== PRODUTOS
+        CUPOM PARA SIMPLES CONFERENCIA **** ==
+        Atendente (s): IRAPUAN lesa : 109
+        05/10/2023 13:49
+        Caixa: 13 Cupon: 29
+        VALOR
+        PRODUTO QTDE VALOR UN. ======
+        CHEESE CAKE 26, 90 53,80
+        SHITAKE FLAM 0,01 0, 02
+        HARUMAKI COM 0,01 0,01
+        MISSO SHIRU 0,01 0,01
+        SUCO DE LIMA
+        AGUA MINALBA 21,90 19.80
+        SUPERSUSHI C 69, 88 209, 00
+        TEPPAN YAKIS 69, 88 69, 88
+        PEPSI ZERO 10 90 10,90
+        a=====
+        SUBTOTAL
+        SERVICO 385, 96
+        38,59
+        TOTAL 424,55
+        No. DE PESSOAS 1
+        TUTAL P/ PESSOA 424,55
+        Primeiro Pedido: 12:32 hs
+        ** Tempo de Permanencia: 01:17:54 hs AGUARDE A EMISSAO DO CUPOM FISCAL **
+        ==================:
+        10% DO GARCOM E CORRELATOS OPCIONAL DIGO ======≤===========
+        NAO OBRIGATORIO PELOS BONS SERVICOS
         """)
 
         let current = try parser.parse()
-        let expected: [Product] = [
-            Product(name: "PR. UNI LIBANESA", unitPrice: Optional(12.0), total: 12.0),
-            Product(name: "ESFIRAS UN SEM CARNE", unitPrice: nil, total: 12.5),
-            Product(name: "ESFIRAS COM CARNE UN", unitPrice: Optional(12.5), total: 12.5),
-            Product(name: "3 KAFTAS BOVINA 1", unitPrice: nil, total: 26.0),
-            Product(name: "KIBE UN 1", unitPrice: nil, total: 12.5),
-            Product(name: "REFRIGERANTE COCA 2", unitPrice: nil, total: 7.9),
-            Product(name: "REFRIGERANTE COCA 1 ZERO", unitPrice: nil, total: 7.9),
-            Product(name: "SHAWARMAS BOVINA 2", unitPrice: nil, total: 32.0),
-            Product(name: "TABUA RIHAN 1", unitPrice: nil, total: 38.0),
-            Product(name: "Valor Total Pedido Taxa de Servico.. Valor a Pagar Pessoas na Mesa Valor Por Pessoa EM VALOR", unitPrice: Optional(226.2), total: 22.62),
-            Product(name: "248, 82 004", unitPrice: nil, total: 62.21)
-        ]
+        let expected: [Product] = []
 
         XCTAssertEqual(current, expected)
+    }
+
+    func testJSONEncoding() throws {
+        let products = [
+            Product(name: "1 PIZZA DOG HAPPY D", unitPrice: 18.9, total: 18.9),
+            Product(name: "1 NEGRONI HAPPY D", unitPrice: 19.9, total: 39.9),
+            Product(name: "1 Soda Italiana", unitPrice: 16.0, total: 32.0),
+            Product(name: "1 MOSCOW MULE HAPPY D", unitPrice: 19.9, total: 19.9),
+            Product(name: "1 COSMOPOLITAN HAPPY D", total: 19.9),
+        ]
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let encoded = try? encoder.encode(products)
+        let current = String(data: encoded!, encoding: .utf8)
+        let expected = """
+        [
+          {
+            "amount" : 1,
+            "lowConfidence" : false,
+            "name" : "1 PIZZA DOG HAPPY D",
+            "unitPrice" : 18.9
+          },
+          {
+            "amount" : 2,
+            "lowConfidence" : true,
+            "name" : "1 NEGRONI HAPPY D",
+            "unitPrice" : 19.9
+          },
+          {
+            "amount" : 2,
+            "lowConfidence" : false,
+            "name" : "1 Soda Italiana",
+            "unitPrice" : 16
+          },
+          {
+            "amount" : 1,
+            "lowConfidence" : false,
+            "name" : "1 MOSCOW MULE HAPPY D",
+            "unitPrice" : 19.9
+          },
+          {
+            "amount" : 1,
+            "lowConfidence" : false,
+            "name" : "1 COSMOPOLITAN HAPPY D",
+            "unitPrice" : 19.9
+          }
+        ]
+        """
+
+        XCTAssertEqual(current!, expected)
     }
 
     func testPerformanceExample() throws {

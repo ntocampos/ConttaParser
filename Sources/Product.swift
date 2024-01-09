@@ -7,12 +7,33 @@
 
 import Foundation
 
-public struct Product: Equatable {
+public struct Product: Equatable, Encodable {
     var name: String
     var unitPrice: Double?
     var total: Double
     var amount: Int {
-        unitPrice != nil ? Int(total / unitPrice!) : Int(total)
+        unitPrice == nil ? 1 : Int(total / unitPrice!)
+    }
+    var lowConfidence: Bool {
+        guard let uPrice = unitPrice else { return false }
+        return total.remainder(dividingBy: uPrice) != 0
+    }
+    var finalUnitPrice: Double {
+        if let uPrice = unitPrice { return uPrice }
+        return total
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(name, forKey: .name)
+        try container.encode(amount, forKey: .amount)
+        try container.encode(finalUnitPrice, forKey: .unitPrice)
+        try container.encode(lowConfidence, forKey: .lowConfidence)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, amount, unitPrice, lowConfidence
     }
 }
 
