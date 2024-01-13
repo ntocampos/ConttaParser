@@ -10,126 +10,118 @@ import Foundation
 enum ProductParsingError: Error {
     case noPricesFound
     case noProductsFound
+    case unexpectedMissingPrice
 }
 
 @available(macOS 13.0, *)
 @available(iOS 16.0, *)
 public class MyParser {
     var text: String
-    let nameRegex = /(.)(.)/
     let priceRegex = /(\d+\s*[,|\.]\s*\d\d?)/
-    let whiteSpaceRegex = /[\n\r\s]*/
+    let nonValidChars = /[^A-Za-z0-9\s]+/
+    let whiteSpaceRegex = /[\n\r\s]+/
 
     public init(_ text: String) {
         self.text = text
     }
 
     public func parse() throws -> [Product] {
-        let anchors = findAnchors()
-        guard anchors.count > 0 else { throw ProductParsingError.noPricesFound }
+        let totalPriceRanges = findTotalPriceRanges()
+        let productRanges = try getProductRanges(totalPriceRanges)
+        let cleanProductRanges = removeEmptyRanges(productRanges)
 
-        let dirtyStrings = getStrings(anchors)
-        let strings = cleanStrings(dirtyStrings)
+        let products = try cleanProductRanges.map { try buildProduct($0) }
 
-        return buildProducts(strings)
+        return products
     }
 
-    private func findAnchors() -> [Range<String.Index>] {
-        text.ranges(of: priceRegex)
-    }
+    private func removeEmptyRanges(_ ranges: [Range<Substring.Index>]) -> [Range<Substring.Index>] {
+        var cleanRanges: [Range<Substring.Index>] = []
 
-    private func getStrings(_ anchors: [Range<String.Index>]) -> [String] {
-        let initialRange = findInitialRange(firstRange: anchors[0])
-        var ranges = intersperseRanges(ranges: anchors)
-        ranges.insert(initialRange, at: 0)
+        var i = 0
+        while i < ranges.count - 1 {
+            let current = ranges[i], currentText = String(text[current])
+            let next = ranges[i + 1], nextText = String(text[next])
 
-        return ranges.map { String(text[$0]) }
-    }
+            let cleanCurrent = cleanText(currentText.replacing(priceRegex, with: ""))
+            let cleanNext = cleanText(nextText.replacing(priceRegex, with: ""))
 
-    private func cleanStrings(_ dirty: [String]) -> [String] {
-        let regex = Regex(/[^a-zA-Z0-9\s,\.]/)
-        return dirty.map { str in
-            var newStr = str
-            newStr.replace(regex, with: "")
-            return String(newStr).trimmingCharacters(in: .whitespacesAndNewlines)
-        }.filter {
-            !$0.isEmpty
+            if !cleanCurrent.isEmpty && cleanNext.isEmpty {
+                cleanRanges.append(current.lowerBound..<next.upperBound)
+                i += 2
+            } else {
+                cleanRanges.append(current)
+                i += 1
+            }
         }
+        if let last = ranges.last, let cleanLast = cleanRanges.last {
+            cleanRanges.append(cleanLast.upperBound..<last.upperBound)
+        }
+
+        return cleanRanges
+    }
+
+    private func cleanText(_ str: String) -> String {
+        str
+            .replacingOccurrences(of: "[^A-Za-z0-9\\s]+", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func findTotalPriceRanges() -> [Range<Substring.Index>] {
+        text
+            .split(separator: "\n")
+            .compactMap { $0.ranges(of: priceRegex).last }
+    }
+
+    private func getProductRanges(_ totalPriceRanges: [Range<Substring.Index>]) throws -> [Range<Substring.Index>] {
+        guard let firstRange = totalPriceRanges.first else {
+            throw ProductParsingError.noPricesFound
+        }
+
+        var productRanges: [Range<Substring.Index>] = []
+        let initialRange = findInitialRange(firstRange: firstRange)
+        productRanges.append(initialRange.lowerBound..<firstRange.upperBound)
+
+        for i in 0..<totalPriceRanges.count - 2 {
+            let current = totalPriceRanges[i]
+            let next = totalPriceRanges[i + 1]
+            productRanges.append(current.upperBound..<next.upperBound)
+        }
+
+        if let lastPrice = totalPriceRanges.last, let lastProduct = productRanges.last {
+            productRanges.append(lastProduct.upperBound..<lastPrice.upperBound)
+        }
+
+        return productRanges
     }
 
     private func findInitialRange(firstRange: Range<String.Index>) -> Range<String.Index> {
         let firstSection = String.Index(utf16Offset: 0, in: text)..<firstRange.lowerBound
-        let rangeStart = text[firstSection].lastIndex(of: "\n") ?? String.Index(utf16Offset: 0, in: text)
+        let rangeStart = text[firstSection]
+            .replacing(priceRegex, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lastIndex(of: "\n") ?? String.Index(utf16Offset: 0, in: text)
 
         return rangeStart..<firstRange.lowerBound
     }
 
-    private func intersperseRanges(ranges: [Range<String.Index>]) -> [Range<String.Index>] {
-        var output: [Range<String.Index>] = []
-        guard ranges.count > 0 else { return [] }
+    private func buildProduct(_ range: Range<Substring.Index>) throws -> Product {
+        let productText = text[range]
+        let name = productText
+            .replacing(priceRegex, with: "")
+            .replacing(whiteSpaceRegex, with: " ")
+            .replacingOccurrences(of: "[^A-Za-z0-9\\s]+", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        var prices = productText.ranges(of: priceRegex)
+            .map { String(productText[$0]) }
+            .compactMap { strToDouble($0) }
 
-        output.append(ranges[0])
-
-        for i in 0..<ranges.count - 1 {
-            let current = ranges[i], next = ranges[i + 1]
-            output.append(current.upperBound..<next.lowerBound)
-            output.append(next)
+        guard let total = prices.popLast() else {
+            throw ProductParsingError.unexpectedMissingPrice
         }
 
-        return output
-    }
+        let unitPrice = prices.popLast()
 
-    private func buildProducts(_ strings: [String]) -> [Product] {
-        var products: [Product] = []
-
-        var tempName = ""
-        var tempUnitPrice = ""
-        var tempTotal = ""
-
-        for str in strings {
-            if isName(str) {
-                if let product = buildProduct(name: tempName, unitPriceStr: tempUnitPrice, totalStr: tempTotal) {
-                    products.append(product)
-                    tempName = ""
-                    tempUnitPrice = ""
-                    tempTotal = ""
-                }
-                tempName = str
-            } else if isPrice(str) {
-                if tempTotal.isEmpty { tempTotal = str }
-                else {
-                    tempUnitPrice = tempTotal
-                    tempTotal = str
-                }
-            }
-        }
-
-        if let product = buildProduct(name: tempName, unitPriceStr: tempUnitPrice, totalStr: tempTotal) {
-            products.append(product)
-        }
-
-        products.forEach { debugPrint($0) }
-        return products
-    }
-
-    private func isPrice(_ str: String) -> Bool {
-        str.contains(priceRegex)
-    }
-
-    private func isName(_ str: String) -> Bool {
-        !isPrice(str)
-    }
-
-    private func buildProduct(name: String, unitPriceStr: String, totalStr: String) -> Product? {
-        guard
-            !name.isEmpty,
-            !totalStr.isEmpty,
-            let total = strToDouble(totalStr)
-        else {
-            return nil
-        }
-
-        let unitPrice = strToDouble(unitPriceStr)
         return Product(dirtyName: name, unitPrice: unitPrice, total: total)
     }
 

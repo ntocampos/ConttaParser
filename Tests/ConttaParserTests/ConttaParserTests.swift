@@ -29,7 +29,7 @@ final class ConttaParserTests: XCTestCase {
         16,00
         1 MOSCOW MULE HAPPY D (19,90)
         19,90
-        1 COSMOPOLITAN HAPPY D (19,90)
+        1 COSMOPOLITAN HAPPY D (29,90)
         """)
         let current = try parser.parse()
         let expected: [Product] = [
@@ -37,49 +37,68 @@ final class ConttaParserTests: XCTestCase {
             Product(name: "1 NEGRONI HAPPY D", unitPrice: 19.9, total: 19.9),
             Product(name: "1 Soda Italiana", unitPrice: 16.0, total: 16.0),
             Product(name: "1 MOSCOW MULE HAPPY D", unitPrice: 19.9, total: 19.9),
-            Product(name: "1 COSMOPOLITAN HAPPY D", total: 19.9),
+            Product(name: "1 COSMOPOLITAN HAPPY D", total: 29.9),
         ]
 
-        XCTAssertEqual(current, expected)
+        assertListsAreEqual(current, expected)
     }
 
     func testRecipeTemplate2() throws {
         let parser = MyParser("""
-        DITNA DO FUTURO
-        NFERENCIA 935555 DE =====≤===== PRODUTOS
-        CUPOM PARA SIMPLES CONFERENCIA **** ==
-        Atendente (s): IRAPUAN lesa : 109
-        05/10/2023 13:49
-        Caixa: 13 Cupon: 29
-        VALOR
-        PRODUTO QTDE VALOR UN. ======
-        CHEESE CAKE 26, 90 53,80
-        SHITAKE FLAM 0,01 0, 02
-        HARUMAKI COM 0,01 0,01
-        MISSO SHIRU 0,01 0,01
-        SUCO DE LIMA
-        AGUA MINALBA 21,90 19.80
-        SUPERSUSHI C 69, 88 209, 00
-        TEPPAN YAKIS 69, 88 69, 88
-        PEPSI ZERO 10 90 10,90
-        a=====
-        SUBTOTAL
-        SERVICO 385, 96
-        38,59
-        TOTAL 424,55
-        No. DE PESSOAS 1
-        TUTAL P/ PESSOA 424,55
-        Primeiro Pedido: 12:32 hs
-        ** Tempo de Permanencia: 01:17:54 hs AGUARDE A EMISSAO DO CUPOM FISCAL **
-        ==================:
-        10% DO GARCOM E CORRELATOS OPCIONAL DIGO ======≤===========
-        NAO OBRIGATORIO PELOS BONS SERVICOS
+        RELATORIO DE CONSUMO
+        CODIGO DESCRICAD PRECO QTD TOTAL
+        000134 HEINEKEN LONG NECK (ESTAO NA MESA 15
+        13,00 001 13,00
+        000060 GIN TONICA 18,00 001 18.00
+        000134 HEINEKEN LONG NECK 13,00 003 39,00
+        000045 BAMBOO 24,00 001 24,00
+        000073 JACK FIRE E GINGER 24,00 001 24,00
+        000063 MOSCOW MULE 26,00 002 52,00
+        000025 CHORI LOA 17,90 002 35.80
+        000027 CHORI MIRANDA 18,90 001 18,90
+        PRODUTOS R$ 224,70
+        COMISSAO R$ 22,47
+        TOTAL R$ 247,17
         """)
 
         let current = try parser.parse()
-        let expected: [Product] = []
+        let expected: [Product] = [
+            Product(name: "001", unitPrice: 13.0, total: 13.0),
+            Product(name: "000060 GIN TONICA 001", unitPrice: 18.0, total: 18.0),
+            Product(name: "000134 HEINEKEN LONG NECK 003", unitPrice: 13.0, total: 39.0),
+            Product(name: "000045 BAMBOO 001", unitPrice: 24.0, total: 24.0),
+            Product(name: "000073 JACK FIRE E GINGER 001", unitPrice: 24.0, total: 24.0),
+            Product(name: "000063 MOSCOW MULE 002", unitPrice: 26.0, total: 52.0),
+            Product(name: "000025 CHORI LOA 002", unitPrice: 17.9, total: 35.8),
+            Product(name: "000027 CHORI MIRANDA 001", unitPrice: 18.9, total: 18.9),
+            Product(name: "PRODUTOS R", total: 224.7),
+            Product(name: "COMISSAO R", total: 22.47),
+            Product(name: "TOTAL R", total: 247.17)
+        ]
 
-        XCTAssertEqual(current, expected)
+        assertListsAreEqual(current, expected)
+    }
+
+    func testRecipeTemplate3() throws {
+        let parser = MyParser("""
+        RELATORIO DE CONSUMO
+        CODIGO DESCRICAD PRECO QTD TOTAL
+        PRODUTO 1
+        10,00 30,00
+        PRODUTO 2
+        UND x 2 10,00 20,00
+        PRODUTO 3
+        UND x 1 10,00 10,00
+        """)
+
+        let current = try parser.parse()
+        let expected: [Product] = [
+            Product(name: "PRODUTO 1", unitPrice: 10, total: 30),
+            Product(name: "PRODUTO 2 UND x 2", unitPrice: 10, total: 20),
+            Product(name: "PRODUTO 3 UND x 1", unitPrice: 10, total: 10),
+        ]
+
+        assertListsAreEqual(current, expected)
     }
 
     func testJSONEncoding() throws {
@@ -137,6 +156,13 @@ final class ConttaParserTests: XCTestCase {
         // This is an example of a performance test case.
         self.measure {
             // Put the code you want to measure the time of here.
+        }
+    }
+
+    func assertListsAreEqual<T: Equatable>(_ list1: [T], _ list2: [T]) {
+        XCTAssertEqual(list1.count, list2.count)
+        zip(list1, list2).forEach { (elem1, elem2) in
+            XCTAssertEqual(elem1, elem2)
         }
     }
 }
