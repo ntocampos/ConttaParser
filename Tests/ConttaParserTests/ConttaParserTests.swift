@@ -123,7 +123,7 @@ final class ConttaParserTests: XCTestCase {
             "unitPrice" : 18.9
           },
           {
-            "amount" : 2,
+            "amount" : 3,
             "lowConfidence" : true,
             "name" : "1 NEGRONI HAPPY D",
             "unitPrice" : 19.9
@@ -150,6 +150,22 @@ final class ConttaParserTests: XCTestCase {
         """
 
         XCTAssertEqual(current!, expected)
+    }
+
+    func testZeroPricedProduct() throws {
+        let parser = MyParser("""
+        PRODUTO 1 30,00
+        PRODUTO 2 0,00
+        """)
+
+        let current = try parser.parse()
+        let expected: [Product] = [
+            Product(name: "PRODUTO 1", unitPrice: nil, total: 30),
+            Product(name: "PRODUTO 2", unitPrice: nil, total: 0),
+        ]
+
+        assertListsAreEqual(current, expected)
+        assert(current[0].amount == 1)
     }
 
     func testPerformanceExample() throws {

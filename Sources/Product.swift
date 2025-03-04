@@ -12,7 +12,7 @@ public struct Product: Equatable, Encodable {
     var unitPrice: Double?
     var total: Double
     var amount: Int {
-        unitPrice == nil ? 1 : Int(total / unitPrice!)
+        unitPrice == nil || unitPrice == 0 ? 1 : Int(ceil(total / unitPrice!))
     }
     var lowConfidence: Bool {
         guard let uPrice = unitPrice else { return false }
